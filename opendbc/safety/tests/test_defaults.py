@@ -24,6 +24,39 @@ class TestNoOutput(TestDefaultRxHookBase):
     self.safety.set_safety_hooks(CarParams.SafetyModel.noOutput, 0)
     self.safety.init_tests()
 
+  def test_extra_branch_coverage(self):
+    self.safety.safety_tick_null()
+    self.assertEqual(0, self.safety.to_signed(1, 0))
+    self.assertEqual(0, self.safety.to_signed(1, -5))
+    for brake, brake_prev, regen, regen_prev, steer, steer_prev, moving, expected_allowed in [
+      (False, False, False, False, True, False, False, False),
+      (False, False, False, False, True, True, False, True),
+      (True, False, False, False, False, False, False, False),
+      (True, True, False, False, False, False, False, True),
+      (True, True, False, False, False, False, True, False),
+      (False, False, True, False, False, False, False, False),
+      (False, False, True, True, False, False, False, True),
+      (False, False, True, True, False, False, True, False),
+    ]:
+      self.safety.set_controls_allowed(True)
+      self.safety.trigger_generic_rx_checks(brake, brake_prev, regen, regen_prev, steer, steer_prev, moving)
+      self.assertEqual(self.safety.get_controls_allowed(), expected_allowed, (brake, brake_prev, regen, regen_prev, steer, steer_prev, moving))
+
+  def test_rx_checks_alternative_mismatch(self):
+    self.safety.set_safety_hooks(CarParams.SafetyModel.nissan, 0)
+    self.safety.init_tests()
+    self.assertTrue(self._rx(common.make_msg(0, 0x15c, 8)))
+    self.assertFalse(self._rx(common.make_msg(1, 0x15c, 8)))
+
+  def test_forwarding_static_blocking(self):
+    self.safety.set_safety_hooks(CarParams.SafetyModel.tesla, 0)
+    self.safety.init_tests()
+    self.assertEqual(2, self.safety.safety_fwd_hook(0, 0x488))
+    self.safety.set_safety_hooks(CarParams.SafetyModel.noOutput, 0)
+    self.safety.init_tests()
+    self.assertEqual(2, self.safety.safety_fwd_hook(0, 0x123))
+
+
 
 class TestSilent(TestNoOutput):
   """SILENT uses same hooks as NOOUTPUT"""

@@ -140,6 +140,25 @@ class TestTeslaSafetyBase(common.CarSafetyTest, common.AngleSteeringSafetyTest, 
     # For common.LongitudinalAccelSafetyTest
     return self._long_control_msg(10, accel_limits=(accel, max(accel, 0)))
 
+  def test_angle_clamp_edge_cases(self):
+    self._rx(self._angle_meas_msg(400.0))
+    self.safety.set_controls_allowed(True)
+    self._tx(self._angle_cmd_msg(0, 0))
+
+    self._rx(self._angle_meas_msg(-400.0))
+    self._tx(self._angle_cmd_msg(0, 0))
+
+    self._rx(self._angle_meas_msg(0.0))
+    self._tx(self._angle_cmd_msg(0, 0))
+
+    self.safety.set_controls_allowed(False)
+    self._rx(self._angle_meas_msg(400.0))
+    self._tx(self._angle_cmd_msg(0, 0))
+    self._rx(self._angle_meas_msg(-400.0))
+    self._tx(self._angle_cmd_msg(0, 0))
+    self._rx(self._angle_meas_msg(0.0))
+    self._tx(self._angle_cmd_msg(0, 0))
+
   def test_rx_hook(self):
     # counter check
     for msg_type in ("angle", "long", "speed", "speed_2"):

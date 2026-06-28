@@ -235,3 +235,18 @@ void init_tests(void){
   ignition_can = false;
   ignition_can_cnt = 0U;
 }
+
+void trigger_generic_rx_checks(bool brake, bool brake_prev, bool regen, bool regen_prev, bool steer, bool steer_prev, bool moving) {
+  brake_pressed = brake;
+  brake_pressed_prev = brake_prev;
+  regen_braking = regen;
+  regen_braking_prev = regen_prev;
+  steering_disengage = steer;
+  steering_disengage_prev = steer_prev;
+  vehicle_moving = moving;
+  generic_rx_checks();
+}
+
+void safety_tick_null(void) {
+  safety_tick(NULL);
+}
