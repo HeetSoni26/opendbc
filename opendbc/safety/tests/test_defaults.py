@@ -90,6 +90,10 @@ class TestNoOutput(TestDefaultRxHookBase):
     self.safety.safety_tick_current_safety_config()
     self.assertFalse(self.safety.get_controls_allowed())
 
+    # Restore safety hooks to avoid polluting global state
+    self.safety.set_safety_hooks(CarParams.SafetyModel.noOutput, 0)
+    self.safety.init_tests()
+
   def test_rx_checks_alternative_mismatch(self):
     self.safety.set_safety_hooks(CarParams.SafetyModel.nissan, 0)
     self.safety.init_tests()

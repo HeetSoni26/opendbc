@@ -251,6 +251,10 @@ void safety_tick_null(void) {
   safety_tick(NULL);
 }
 
+void safety_tick_current_safety_config(void) {
+  safety_tick(&current_safety_config);
+}
+
 void set_disable_forwarding(bool c) {
   current_safety_config.disable_forwarding = c;
 }
