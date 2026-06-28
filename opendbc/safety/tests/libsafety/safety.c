@@ -259,6 +259,7 @@ static uint32_t mock_get_checksum(const CANPacket_t *msg) { return msg->data[0];
 static uint32_t mock_compute_checksum(const CANPacket_t *msg) { return msg->data[0]; }
 static uint8_t mock_get_counter(const CANPacket_t *msg) { return msg->data[1]; }
 static bool mock_get_quality_flag_valid(const CANPacket_t *msg) { return msg->data[2] != 0; }
+static void mock_rx_hook(const CANPacket_t *msg) { (void)msg; }
 
 static RxCheck mock_rx_checks[1];
 static safety_config mock_safety_config = {
@@ -272,7 +273,7 @@ void set_mock_safety_hooks(
   bool has_get_counter, bool has_get_quality_flag
 ) {
   mock_hooks.init = NULL;
-  mock_hooks.rx = NULL;
+  mock_hooks.rx = mock_rx_hook;  // always set a no-op to prevent null deref in safety_rx_hook
   mock_hooks.tx = NULL;
   mock_hooks.fwd = NULL;
   mock_hooks.get_checksum = has_get_checksum ? mock_get_checksum : NULL;
