@@ -122,7 +122,6 @@ bool get_ignition_can(void);
 void set_ignition_can(bool c);
 void trigger_generic_rx_checks(bool brake, bool brake_prev, bool regen, bool regen_prev, bool steer, bool steer_prev, bool moving);
 void safety_tick_null(void);
-void safety_tick_current_safety_config(void);
 int to_signed(int d, int bits);
 void set_disable_forwarding(bool c);
 void set_mock_safety_hooks(bool has_get_checksum, bool has_compute_checksum, bool has_get_counter, bool has_get_quality_flag);
