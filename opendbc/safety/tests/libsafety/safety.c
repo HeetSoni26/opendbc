@@ -98,6 +98,10 @@ bool get_vehicle_moving(void){
   return vehicle_moving;
 }
 
+void set_vehicle_moving(bool c){
+  vehicle_moving = c;
+}
+
 bool get_acc_main_on(void){
   return acc_main_on;
 }
@@ -234,4 +238,102 @@ void init_tests(void){
 
   ignition_can = false;
   ignition_can_cnt = 0U;
+}
+
+void trigger_generic_rx_checks(bool brake, bool brake_prev, bool regen, bool regen_prev, bool steer, bool steer_prev, bool moving) {
+  brake_pressed = brake;
+  brake_pressed_prev = brake_prev;
+  regen_braking = regen;
+  regen_braking_prev = regen_prev;
+  steering_disengage = steer;
+  steering_disengage_prev = steer_prev;
+  vehicle_moving = moving;
+  generic_rx_checks();
+}
+
+void safety_tick_null(void) {
+  safety_tick(NULL);
+}
+
+void set_disable_forwarding(bool c) {
+  current_safety_config.disable_forwarding = c;
+}
+
+static uint32_t mock_get_checksum(const CANPacket_t *msg) { return msg->data[0]; }
+static uint32_t mock_compute_checksum(const CANPacket_t *msg) { return msg->data[0]; }
+static uint8_t mock_get_counter(const CANPacket_t *msg) { return msg->data[1]; }
+static bool mock_get_quality_flag_valid(const CANPacket_t *msg) { return msg->data[2] != 0; }
+static void mock_rx_hook(const CANPacket_t *msg) { (void)msg; }
+
+static RxCheck mock_rx_checks[1];
+static safety_config mock_safety_config = {
+  .rx_checks = mock_rx_checks,
+  .rx_checks_len = 1,
+};
+static safety_hooks mock_hooks;
+
+void set_mock_safety_hooks(
+  bool has_get_checksum, bool has_compute_checksum,
+  bool has_get_counter, bool has_get_quality_flag
+) {
+  mock_hooks.init = NULL;
+  mock_hooks.rx = mock_rx_hook;  // always set a no-op to prevent null deref in safety_rx_hook
+  mock_hooks.tx = NULL;
+  mock_hooks.fwd = NULL;
+  mock_hooks.get_checksum = has_get_checksum ? mock_get_checksum : NULL;
+  mock_hooks.compute_checksum = has_compute_checksum ? mock_compute_checksum : NULL;
+  mock_hooks.get_counter = has_get_counter ? mock_get_counter : NULL;
+  mock_hooks.get_quality_flag_valid = has_get_quality_flag ? mock_get_quality_flag_valid : NULL;
+  
+  current_hooks = &mock_hooks;
+}
+
+void set_mock_rx_check(
+  int addr, int bus, int len,
+  bool ignore_checksum, bool ignore_counter, int max_counter, bool ignore_quality_flag, int frequency
+) {
+  CanMsgCheck temp = {
+    .addr = addr,
+    .bus = bus,
+    .len = len,
+    .frequency = frequency,
+    .ignore_checksum = ignore_checksum,
+    .ignore_counter = ignore_counter,
+    .max_counter = max_counter,
+    .ignore_quality_flag = ignore_quality_flag,
+  };
+  unsigned char *dest = (unsigned char *)&mock_rx_checks[0].msg[0];
+  unsigned char *src = (unsigned char *)&temp;
+  for (unsigned int i = 0; i < sizeof(CanMsgCheck); i++) {
+    dest[i] = src[i];
+  }
+  mock_rx_checks[0].status = (RxStatus){0};
+  
+  current_safety_config = mock_safety_config;
+}
+
+void test_rx_hook(const CANPacket_t *msg) {
+  if (current_hooks->rx != NULL) {
+    current_hooks->rx(msg);
+  }
+}
+
+bool test_tx_hook(const CANPacket_t *msg) {
+  return (current_hooks->tx != NULL) ? current_hooks->tx(msg) : false;
+}
+
+uint8_t test_get_counter(const CANPacket_t *msg) {
+  return (current_hooks->get_counter != NULL) ? current_hooks->get_counter(msg) : 0U;
+}
+
+uint32_t test_get_checksum(const CANPacket_t *msg) {
+  return (current_hooks->get_checksum != NULL) ? current_hooks->get_checksum(msg) : 0U;
+}
+
+uint32_t test_compute_checksum(const CANPacket_t *msg) {
+  return (current_hooks->compute_checksum != NULL) ? current_hooks->compute_checksum(msg) : 0U;
+}
+
+bool test_get_quality_flag_valid(const CANPacket_t *msg) {
+  return (current_hooks->get_quality_flag_valid != NULL) ? current_hooks->get_quality_flag_valid(msg) : false;
 }
