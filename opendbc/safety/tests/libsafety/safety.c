@@ -250,3 +250,7 @@ void trigger_generic_rx_checks(bool brake, bool brake_prev, bool regen, bool reg
 void safety_tick_null(void) {
   safety_tick(NULL);
 }
+
+void set_disable_forwarding(bool c) {
+  current_safety_config.disable_forwarding = c;
+}

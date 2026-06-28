@@ -122,6 +122,8 @@ bool get_ignition_can(void);
 void set_ignition_can(bool c);
 void trigger_generic_rx_checks(bool brake, bool brake_prev, bool regen, bool regen_prev, bool steer, bool steer_prev, bool moving);
 void safety_tick_null(void);
+int to_signed(int d, int bits);
+void set_disable_forwarding(bool c);
 """)
 
 class LibSafety:

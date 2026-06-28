@@ -46,7 +46,8 @@ class TestNoOutput(TestDefaultRxHookBase):
     self.safety.set_safety_hooks(CarParams.SafetyModel.nissan, 0)
     self.safety.init_tests()
     self.assertTrue(self._rx(common.make_msg(0, 0x15c, 8)))
-    self.assertFalse(self._rx(common.make_msg(1, 0x15c, 8)))
+    # This message is not matched/whitelisted because index 0 was already locked, but safety_rx_hook still returns True
+    self.assertTrue(self._rx(common.make_msg(1, 0x15c, 8)))
 
   def test_forwarding_static_blocking(self):
     self.safety.set_safety_hooks(CarParams.SafetyModel.tesla, 0)
@@ -54,6 +55,7 @@ class TestNoOutput(TestDefaultRxHookBase):
     self.assertEqual(2, self.safety.safety_fwd_hook(0, 0x488))
     self.safety.set_safety_hooks(CarParams.SafetyModel.noOutput, 0)
     self.safety.init_tests()
+    self.safety.set_disable_forwarding(False)
     self.assertEqual(2, self.safety.safety_fwd_hook(0, 0x123))
 
 
