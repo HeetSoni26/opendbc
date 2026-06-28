@@ -287,8 +287,7 @@ void set_mock_rx_check(
   int addr, int bus, int len,
   bool ignore_checksum, bool ignore_counter, int max_counter, bool ignore_quality_flag, int frequency
 ) {
-  CanMsgCheck *msg = (CanMsgCheck *)&mock_rx_checks[0].msg[0];
-  *msg = (CanMsgCheck){
+  CanMsgCheck temp = {
     .addr = addr,
     .bus = bus,
     .len = len,
@@ -298,6 +297,11 @@ void set_mock_rx_check(
     .max_counter = max_counter,
     .ignore_quality_flag = ignore_quality_flag,
   };
+  unsigned char *dest = (unsigned char *)&mock_rx_checks[0].msg[0];
+  unsigned char *src = (unsigned char *)&temp;
+  for (unsigned int i = 0; i < sizeof(CanMsgCheck); i++) {
+    dest[i] = src[i];
+  }
   mock_rx_checks[0].status = (RxStatus){0};
   
   current_safety_config = mock_safety_config;
