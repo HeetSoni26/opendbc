@@ -124,6 +124,8 @@ void trigger_generic_rx_checks(bool brake, bool brake_prev, bool regen, bool reg
 void safety_tick_null(void);
 int to_signed(int d, int bits);
 void set_disable_forwarding(bool c);
+void set_mock_safety_hooks(bool has_get_checksum, bool has_compute_checksum, bool has_get_counter, bool has_get_quality_flag);
+void set_mock_rx_check(int addr, int bus, int len, bool ignore_checksum, bool ignore_counter, int max_counter, bool ignore_quality_flag, int frequency);
 """)
 
 class LibSafety:

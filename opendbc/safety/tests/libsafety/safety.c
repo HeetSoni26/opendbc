@@ -254,3 +254,50 @@ void safety_tick_null(void) {
 void set_disable_forwarding(bool c) {
   current_safety_config.disable_forwarding = c;
 }
+
+static uint32_t mock_get_checksum(const CANPacket_t *msg) { return msg->data[0]; }
+static uint32_t mock_compute_checksum(const CANPacket_t *msg) { return msg->data[0]; }
+static uint8_t mock_get_counter(const CANPacket_t *msg) { return msg->data[1]; }
+static bool mock_get_quality_flag_valid(const CANPacket_t *msg) { return msg->data[2] != 0; }
+
+static RxCheck mock_rx_checks[1];
+static safety_config mock_safety_config = {
+  .rx_checks = mock_rx_checks,
+  .rx_checks_len = 1,
+};
+static safety_hooks mock_hooks;
+
+void set_mock_safety_hooks(
+  bool has_get_checksum, bool has_compute_checksum,
+  bool has_get_counter, bool has_get_quality_flag
+) {
+  mock_hooks.init = NULL;
+  mock_hooks.rx = NULL;
+  mock_hooks.tx = NULL;
+  mock_hooks.fwd = NULL;
+  mock_hooks.get_checksum = has_get_checksum ? mock_get_checksum : NULL;
+  mock_hooks.compute_checksum = has_compute_checksum ? mock_compute_checksum : NULL;
+  mock_hooks.get_counter = has_get_counter ? mock_get_counter : NULL;
+  mock_hooks.get_quality_flag_valid = has_get_quality_flag ? mock_get_quality_flag_valid : NULL;
+  
+  current_hooks = &mock_hooks;
+}
+
+void set_mock_rx_check(
+  int addr, int bus, int len,
+  bool ignore_checksum, bool ignore_counter, int max_counter, bool ignore_quality_flag, int frequency
+) {
+  mock_rx_checks[0].msg[0] = (CanMsgCheck){
+    .addr = addr,
+    .bus = bus,
+    .len = len,
+    .frequency = frequency,
+    .ignore_checksum = ignore_checksum,
+    .ignore_counter = ignore_counter,
+    .max_counter = max_counter,
+    .ignore_quality_flag = ignore_quality_flag,
+  };
+  mock_rx_checks[0].status = (RxStatus){0};
+  
+  current_safety_config = mock_safety_config;
+}
