@@ -50,6 +50,8 @@ class TestNoOutput(TestDefaultRxHookBase):
       (True, True, True, True),
       (False, True, False, False),
       (False, True, True, True),
+      (True, False, False, False),
+      (True, False, True, True),
     ]:
       self.safety.set_mock_safety_hooks(has_get, has_compute, False, False)
       self.safety.set_mock_rx_check(0x123, 0, 8, ignore_checksum, True, 0, True, 100)
@@ -90,6 +92,51 @@ class TestNoOutput(TestDefaultRxHookBase):
     self.safety.safety_tick_current_safety_config()
     self.assertFalse(self.safety.get_controls_allowed())
 
+    # Test safety_tick branch permutations (lagging, frequency_invalid, msg_valid)
+    # Case: lagging=False, frequency_invalid=False, is_msg_valid=False
+    self.safety.set_mock_safety_hooks(True, True, False, False)
+    self.safety.set_mock_rx_check(0x123, 0, 8, False, True, 0, True, 100) # ignore_checksum=False, so msg_valid=False
+    self.safety.set_timer(0)
+    self.assertFalse(self._rx(common.make_msg(0, 0x123, 8))) # invalid checksum
+    self.safety.set_controls_allowed(True)
+    self.safety.safety_tick_current_safety_config()
+    self.assertFalse(self.safety.get_controls_allowed())
+
+    # Case: lagging=False, frequency_invalid=False, is_msg_valid=True
+    self.safety.set_mock_safety_hooks(True, True, False, False)
+    self.safety.set_mock_rx_check(0x123, 0, 8, True, True, 0, True, 100) # ignore_checksum=True, so msg_valid=True
+    self.safety.set_timer(0)
+    self.assertTrue(self._rx(common.make_msg(0, 0x123, 8)))
+    self.safety.set_controls_allowed(True)
+    self.safety.safety_tick_current_safety_config()
+    self.assertTrue(self.safety.get_controls_allowed())
+
+    # Test ignition_can_hook branch paths (bus and len mismatches)
+    # 1. Bus mismatch
+    self.safety.set_ignition_can(False)
+    self.safety.ignition_can_hook(common.make_msg(1, 0x1F1, 8)) # bus 1
+    self.assertFalse(self.safety.get_ignition_can())
+
+    # 2. GM len mismatch
+    self.safety.ignition_can_hook(common.make_msg(0, 0x1F1, 7))
+    self.assertFalse(self.safety.get_ignition_can())
+
+    # 3. Rivian len mismatch
+    self.safety.ignition_can_hook(common.make_msg(0, 0x152, 7))
+    self.assertFalse(self.safety.get_ignition_can())
+
+    # 4. Tesla len mismatch
+    self.safety.ignition_can_hook(common.make_msg(0, 0x221, 7))
+    self.assertFalse(self.safety.get_ignition_can())
+
+    # 5. Mazda len mismatch
+    self.safety.ignition_can_hook(common.make_msg(0, 0x9E, 7))
+    self.assertFalse(self.safety.get_ignition_can())
+
+    # 6. VW MEB len mismatch
+    self.safety.ignition_can_hook(common.make_msg(0, 0x3C0, 3))
+    self.assertFalse(self.safety.get_ignition_can())
+
     # Restore safety hooks to avoid polluting global state
     self.safety.set_safety_hooks(CarParams.SafetyModel.noOutput, 0)
     self.safety.init_tests()
@@ -100,6 +147,8 @@ class TestNoOutput(TestDefaultRxHookBase):
     self.assertTrue(self._rx(common.make_msg(0, 0x15c, 8)))
     # This message is not matched/whitelisted because index 0 was already locked, but safety_rx_hook still returns True
     self.assertTrue(self._rx(common.make_msg(1, 0x15c, 8)))
+    # Verify address/bus matches but length is different
+    self.assertTrue(self._rx(common.make_msg(0, 0x15c, 7)))
 
   def test_forwarding_static_blocking(self):
     self.safety.set_safety_hooks(CarParams.SafetyModel.tesla, 0)

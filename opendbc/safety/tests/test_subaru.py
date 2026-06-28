@@ -107,6 +107,48 @@ class TestSubaruSafetyBase(common.CarSafetyTest):
     values = {"Cruise_Activated": enable}
     return self.packer.make_can_msg_safety("CruiseControl", self.ALT_MAIN_BUS, values)
 
+  def test_subaru_rx_hook_branches(self):
+    # Test bus mismatches using direct test_rx_hook call
+    self.safety.set_vehicle_moving(False)
+    
+    # Steering_Torque on wrong bus
+    msg = common.make_msg(1, SubaruMsg.Steering_Torque, 8)
+    self.safety.test_rx_hook(msg)
+    self.assertFalse(self.safety.get_vehicle_moving())
+
+    # CruiseControl on wrong bus
+    self.safety.set_controls_allowed(False)
+    msg = common.make_msg(1, SubaruMsg.CruiseControl, 8)
+    self.safety.test_rx_hook(msg)
+    self.assertFalse(self.safety.get_controls_allowed())
+
+    # Wheel_Speeds on wrong bus
+    msg = common.make_msg(1, SubaruMsg.Wheel_Speeds, 8)
+    self.safety.test_rx_hook(msg)
+    
+    # Brake_Status on wrong bus
+    self.safety.set_controls_allowed(True)
+    msg = common.make_msg(1, SubaruMsg.Brake_Status, 8)
+    self.safety.test_rx_hook(msg)
+    
+    # Throttle on wrong bus
+    msg = common.make_msg(1, SubaruMsg.Throttle, 8)
+    self.safety.test_rx_hook(msg)
+
+    # Logical OR wheel speed permutations: (fr > 0) || (rr > 0) || (rl > 0) || (fl > 0)
+    for fr, rr, rl, fl in [
+      (1, 0, 0, 0),
+      (0, 1, 0, 0),
+      (0, 0, 1, 0),
+      (0, 0, 0, 1),
+      (0, 0, 0, 0),
+    ]:
+      self.safety.set_vehicle_moving(False)
+      # pack into Wheel_Speeds message
+      msg = self.packer.make_can_msg_safety("Wheel_Speeds", self.ALT_MAIN_BUS, {"FR": fr, "FL": fl, "RR": rr, "RL": rl})
+      self.safety.test_rx_hook(msg)
+      self.assertEqual(self.safety.get_vehicle_moving(), (fr | rr | rl | fl) > 0)
+
 
 class TestSubaruStockLongitudinalSafetyBase(TestSubaruSafetyBase):
   def _cancel_msg(self, cancel, cruise_throttle=0):
@@ -231,6 +273,12 @@ class TestSubaruGen2LongitudinalSafety(TestSubaruLongitudinalSafetyBase, TestSub
     for sid in range(0xFF):
       msg = b'\x03' + sid.to_bytes(1) + b'\x00' * 6
       self.assertFalse(self._tx(self._es_uds_msg(msg)))
+
+    # Additional UDS message checks with non-zero trailing bytes (to cover false branch of GET_BYTES(msg, 4, 4) == 0)
+    tester_present_bad = b'\x02\x3E\x80\x00\x00\x00\x00\x01'
+    button_rdbi_bad = b'\x03\x22\x11\x30\x00\x00\x00\x01'
+    self.assertFalse(self._tx(self._es_uds_msg(tester_present_bad)))
+    self.assertFalse(self._tx(self._es_uds_msg(button_rdbi_bad)))
 
 
 if __name__ == "__main__":

@@ -101,6 +101,7 @@ int get_curvature_meas_max(void);
 bool get_cruise_engaged_prev(void);
 void set_cruise_engaged_prev(bool engaged);
 bool get_vehicle_moving(void);
+void set_vehicle_moving(bool c);
 void set_timer(uint32_t t);
 
 void safety_tick_current_safety_config();
@@ -126,6 +127,12 @@ int to_signed(int d, int bits);
 void set_disable_forwarding(bool c);
 void set_mock_safety_hooks(bool has_get_checksum, bool has_compute_checksum, bool has_get_counter, bool has_get_quality_flag);
 void set_mock_rx_check(int addr, int bus, int len, bool ignore_checksum, bool ignore_counter, int max_counter, bool ignore_quality_flag, int frequency);
+void test_rx_hook(const CANPacket_t *msg);
+bool test_tx_hook(const CANPacket_t *msg);
+uint8_t test_get_counter(const CANPacket_t *msg);
+uint32_t test_get_checksum(const CANPacket_t *msg);
+uint32_t test_compute_checksum(const CANPacket_t *msg);
+bool test_get_quality_flag_valid(const CANPacket_t *msg);
 """)
 
 class LibSafety:

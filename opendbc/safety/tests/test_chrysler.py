@@ -71,6 +71,38 @@ class TestChryslerSafety(common.CarSafetyTest, common.MotorTorqueSteeringSafetyT
       self.assertFalse(self._tx(self._button_msg(cancel=True, resume=True)))
       self.assertFalse(self._tx(self._button_msg(cancel=False, resume=False)))
 
+  def test_speed_msg_branches(self):
+    # Pacifica (CHRYSLER_PACIFICA) uses addr 514 (0x202) for wheel speeds, bus 0
+    # speed_l = (data[0] << 4) + (data[1] >> 4), speed_r = (data[2] << 4) + (data[3] >> 4)
+    # vehicle_moving = (speed_l != 0) || (speed_r != 0)
+
+    # 1. Bus mismatch - should NOT update vehicle_moving
+    self.safety.set_vehicle_moving(False)
+    msg = common.make_msg(1, 514, dat=b'\x00\x10\x00\x00\x00\x00\x00\x00')  # bus=1, speed_l > 0
+    self.safety.test_rx_hook(msg)
+    self.assertFalse(self.safety.get_vehicle_moving())
+
+    # 2. speed_r != 0, speed_l == 0
+    self.safety.set_vehicle_moving(False)
+    msg = common.make_msg(0, 514, dat=b'\x00\x00\x00\x10\x00\x00\x00\x00')  # speed_r = (0 << 4) + (0x10 >> 4) = 1
+    self.safety.test_rx_hook(msg)
+    self.assertTrue(self.safety.get_vehicle_moving())
+
+    # 3. speed_l != 0, speed_r == 0
+    self.safety.set_vehicle_moving(False)
+    msg = common.make_msg(0, 514, dat=b'\x00\x10\x00\x00\x00\x00\x00\x00')  # speed_l = (0 << 4) + (0x10 >> 4) = 1
+    self.safety.test_rx_hook(msg)
+    self.assertTrue(self.safety.get_vehicle_moving())
+
+    # 4. Both zero
+    self.safety.set_vehicle_moving(True)
+    msg = common.make_msg(0, 514, dat=b'\x00\x00\x00\x00\x00\x00\x00\x00')
+    self.safety.test_rx_hook(msg)
+    self.assertFalse(self.safety.get_vehicle_moving())
+
+
+
+
 
 class TestChryslerRamDTSafety(TestChryslerSafety):
   TX_MSGS = [[0xB1, 2], [0xA6, 0], [0xFA, 0]]

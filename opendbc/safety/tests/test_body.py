@@ -40,6 +40,11 @@ class TestBody(common.SafetyTest):
     self.assertTrue(self._rx(self._motors_data_msg(0, 0)))
     self.assertTrue(self.safety.get_controls_allowed())
 
+    # Cover the false branch of body_rx_hook msg->addr check using our test_rx_hook helper
+    self.safety.set_controls_allowed(False)
+    self.safety.test_rx_hook(common.make_msg(0, 0x999, 8))
+    self.assertFalse(self.safety.get_controls_allowed())
+
   def test_tx_hook(self):
     self.assertFalse(self._tx(self._torque_cmd_msg(0, 0)))
     self.safety.set_controls_allowed(True)
@@ -54,6 +59,21 @@ class TestBody(common.SafetyTest):
     self.assertTrue(self._tx(common.make_msg(0, 0x250, dat=b'\xce\xfa\xad\xde\x1e\x0b\xb0\x0a')))
     self.assertFalse(self._tx(common.make_msg(0, 0x250, dat=b'\xce\xfa\xad\xde\x1e\x0b\xb0')))  # not correct data/len
     self.assertFalse(self._tx(common.make_msg(0, 0x251, dat=b'\xce\xfa\xad\xde\x1e\x0b\xb0\x0a')))  # wrong address
+
+    # Additional branch coverage test cases for line 20 in body.h:
+    # 1. controls_allowed is True, send flasher message:
+    self.safety.set_controls_allowed(True)
+    self.assertTrue(self._tx(common.make_msg(0, 0x250, dat=b'\xce\xfa\xad\xde\x1e\x0b\xb0\x0a')))
+    
+    # 2. controls_allowed is False, send correct first half but wrong second half:
+    self.safety.set_controls_allowed(False)
+    self.assertFalse(self._tx(common.make_msg(0, 0x250, dat=b'\xce\xfa\xad\xde\x00\x00\x00\x00')))
+
+    # 3. controls_allowed is False, send wrong first half but correct second half:
+    self.assertFalse(self._tx(common.make_msg(0, 0x250, dat=b'\x00\x00\x00\x00\x1e\x0b\xb0\x0a')))
+
+    # 4. controls_allowed is False, send correct data but wrong length (9):
+    self.assertFalse(self._tx(common.make_msg(0, 0x250, dat=b'\xce\xfa\xad\xde\x1e\x0b\xb0\x0a\x00')))
 
 
 if __name__ == "__main__":

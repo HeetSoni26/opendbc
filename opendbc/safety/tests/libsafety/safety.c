@@ -98,6 +98,10 @@ bool get_vehicle_moving(void){
   return vehicle_moving;
 }
 
+void set_vehicle_moving(bool c){
+  vehicle_moving = c;
+}
+
 bool get_acc_main_on(void){
   return acc_main_on;
 }
@@ -306,4 +310,30 @@ void set_mock_rx_check(
   mock_rx_checks[0].status = (RxStatus){0};
   
   current_safety_config = mock_safety_config;
+}
+
+void test_rx_hook(const CANPacket_t *msg) {
+  if (current_hooks->rx != NULL) {
+    current_hooks->rx(msg);
+  }
+}
+
+bool test_tx_hook(const CANPacket_t *msg) {
+  return (current_hooks->tx != NULL) ? current_hooks->tx(msg) : false;
+}
+
+uint8_t test_get_counter(const CANPacket_t *msg) {
+  return (current_hooks->get_counter != NULL) ? current_hooks->get_counter(msg) : 0U;
+}
+
+uint32_t test_get_checksum(const CANPacket_t *msg) {
+  return (current_hooks->get_checksum != NULL) ? current_hooks->get_checksum(msg) : 0U;
+}
+
+uint32_t test_compute_checksum(const CANPacket_t *msg) {
+  return (current_hooks->compute_checksum != NULL) ? current_hooks->compute_checksum(msg) : 0U;
+}
+
+bool test_get_quality_flag_valid(const CANPacket_t *msg) {
+  return (current_hooks->get_quality_flag_valid != NULL) ? current_hooks->get_quality_flag_valid(msg) : false;
 }
