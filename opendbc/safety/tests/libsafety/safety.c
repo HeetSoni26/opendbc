@@ -287,7 +287,8 @@ void set_mock_rx_check(
   int addr, int bus, int len,
   bool ignore_checksum, bool ignore_counter, int max_counter, bool ignore_quality_flag, int frequency
 ) {
-  mock_rx_checks[0].msg[0] = (CanMsgCheck){
+  CanMsgCheck *msg = (CanMsgCheck *)&mock_rx_checks[0].msg[0];
+  *msg = (CanMsgCheck){
     .addr = addr,
     .bus = bus,
     .len = len,
